@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account — Poetmap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Account page layout ── */
+    body { overflow: auto; }
+
+    .page-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 1rem 4rem;
+    }
+
+    /* Top nav bar */
+    .topbar {
+      width: 100%;
+      max-width: 760px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.5rem;
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .topbar-brand svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .topbar-brand-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; }
+    .topbar-nav { display: flex; align-items: center; gap: 1.25rem; }
+    .topbar-nav a { color: var(--text-muted); font-size: 0.85rem; text-decoration: none; transition: color 0.2s; }
+    .topbar-nav a:hover { color: var(--accent); }
+    .topbar-nav a.active { color: var(--accent); }
+
+    /* Main content */
+    .content { width: 100%; max-width: 760px; }
+
+    .page-header { margin-bottom: 2rem; }
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.75rem;
+      font-weight: 400;
+      margin-bottom: 0.35rem;
+    }
+    .page-header p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+
+    /* Auth gate */
+    #auth-gate {
+      text-align: center;
+      padding: 4rem 2rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    #auth-gate h2 { font-family: 'Playfair Display', serif; font-weight: 400; margin-bottom: 0.5rem; }
+    #auth-gate p  { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .auth-btn-row { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-oauth {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1.1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 0.85rem;
+      text-decoration: none;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .btn-oauth:hover { border-color: var(--accent); background: var(--accent-dim); }
+
+    /* User info strip */
+    #user-strip {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+    #user-strip img {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+    }
+    #user-strip-name { font-size: 0.9rem; flex: 1; }
+    #user-strip-logout {
+      font-size: 0.8rem; color: var(--text-muted);
+      background: none; border: none; cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--border); border-radius: 4px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #user-strip-logout:hover { color: var(--red); border-color: var(--red); }
+
+    /* Token section */
+    .section { margin-bottom: 2.5rem; }
+    .section-head {
+      display: flex; align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-head h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem; font-weight: 400;
+    }
+    .section-head span { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* Create token form */
+    .create-form {
+      display: flex; gap: 0.6rem; flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .create-form input {
+      flex: 1; min-width: 180px;
+      padding: 0.55rem 0.8rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .create-form input:focus { border-color: var(--accent); }
+    .create-form input::placeholder { color: var(--text-dim); }
+    .btn-primary {
+      padding: 0.55rem 1rem;
+      background: var(--accent);
+      color: #0f0e0d;
+      border: none; border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem; font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+    /* Token reveal banner */
+    #token-reveal {
+      display: none;
+      background: rgba(60,182,201,0.08);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1.25rem;
+    }
+    #token-reveal p {
+      font-size: 0.82rem; color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    #token-reveal strong { color: var(--accent); }
+    .token-raw-row {
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .token-raw {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.45rem 0.7rem;
+      color: var(--text);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .btn-copy {
+      padding: 0.4rem 0.7rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Token list */
+    #token-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .token-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      transition: border-color 0.2s;
+    }
+    .token-item:hover { border-color: rgba(255,255,255,0.15); }
+    .token-item-icon {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 0.8rem; color: var(--accent);
+    }
+    .token-item-info { flex: 1; min-width: 0; }
+    .token-item-name {
+      font-size: 0.875rem; font-weight: 500;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .token-item-meta {
+      font-size: 0.75rem; color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      margin-top: 0.15rem;
+    }
+    .token-item-stats {
+      font-size: 0.75rem; color: var(--text-muted);
+      text-align: right; flex-shrink: 0;
+    }
+    .btn-revoke {
+      padding: 0.3rem 0.6rem;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .btn-revoke:hover { border-color: var(--red); color: var(--red); }
+
+    .empty-state {
+      padding: 2rem; text-align: center;
+      color: var(--text-muted); font-size: 0.875rem;
+      border: 1px dashed var(--border); border-radius: 6px;
+    }
+
+    /* Info box */
+    .info-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.1rem 1.25rem;
+    }
+    .info-box h3 {
+      font-size: 0.85rem; font-weight: 500;
+      margin-bottom: 0.6rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .info-row {
+      display: flex; align-items: baseline;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row-label { color: var(--text-muted); }
+    .info-row-val { font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+    .info-row-val.good { color: var(--green); }
+
+    .err-msg {
+      font-size: 0.82rem; color: var(--red);
+      margin-top: 0.4rem; display: none;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Top nav -->
+  <nav class="topbar">
+    <a class="topbar-brand" href="/">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18" stroke="var(--accent)" stroke-width="1.5"/>
+        <path d="M12 28 Q16 14 20 12 Q24 14 28 28" stroke="var(--accent)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M14 22 Q20 18 26 22" stroke="var(--accent)" stroke-width="1" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="topbar-brand-name">Poetmap</span>
+    </a>
+    <div class="topbar-nav">
+      <a href="/">Map</a>
+      <a href="/docs" >Docs</a>
+      <a href="/account" class="active">Account</a>
+    </div>
+  </nav>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h1>Account</h1>
+      <p>Manage your API tokens. Tokens let you access the Poetmap API programmatically.</p>
+    </div>
+
+    <!-- Auth gate (shown when logged out) -->
+    <div id="auth-gate">
+      <h2>Sign in to manage tokens</h2>
+      <p>You need to be signed in to create or view API tokens.</p>
+      <div class="auth-btn-row">
+        <a class="btn-oauth" href="/auth/google">
+          <svg width="16" height="16" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
+          Continue with Google
+        </a>
+        <a class="btn-oauth" href="/auth/github">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          Continue with GitHub
+        </a>
+      </div>
+    </div>
+
+    <!-- Logged-in content -->
+    <div id="account-content" style="display:none">
+
+      <!-- User strip -->
+      <div id="user-strip">
+        <img id="user-avatar" src="" alt="">
+        <span id="user-strip-name"></span>
+        <button id="user-strip-logout" onclick="logout()">Sign out</button>
+      </div>
+
+      <!-- Rate limit info -->
+      <div class="section">
+        <div class="section-head">
+          <h2>Rate limits</h2>
+        </div>
+        <div class="info-box">
+          <h3>Current plan</h3>
+          <div class="info-row">
+            <span class="info-row-label">Authenticated requests (with token)</span>
+            <span class="info-row-val good">300 / 15 min</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row-label">Anonymous requests (no token)</span>
+            <span class="info-row-val">60 / 15 min · per IP</span>
+          </div>
+          <div class="info-row">
+            <span class="info-row-label">Tokens per account</span>
+            <span class="info-row-val">up to 10</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Token management -->
+      <div class="section">
+        <div class="section-head">
+          <h2>API Tokens</h2>
+          <span id="token-count-label"></span>
+        </div>
+
+        <!-- Create token -->
+        <div class="create-form">
+          <input type="text" id="token-name-input" placeholder="Token name (e.g. my-script)" maxlength="60">
+          <button class="btn-primary" id="create-btn" onclick="createToken()">Generate token</button>
+        </div>
+        <div class="err-msg" id="create-err"></div>
+
+        <!-- Reveal new token -->
+        <div id="token-reveal">
+          <p>⚠ <strong>Copy this token now.</strong> It won't be shown again.</p>
+          <div class="token-raw-row">
+            <code class="token-raw" id="token-raw-value"></code>
+            <button class="btn-copy" onclick="copyToken()">Copy</button>
+          </div>
+        </div>
+
+        <!-- Token list -->
+        <div id="token-list">
+          <div class="empty-state">Loading tokens…</div>
+        </div>
+      </div>
+
+    </div><!-- /account-content -->
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+
+let currentUser = null;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+(async function init() {
+  const res = await fetch('/auth/me');
+  if (!res.ok) {
+    document.getElementById('auth-gate').style.display = 'block';
+    return;
+  }
+  currentUser = await res.json();
+  showAccountContent();
+  loadTokens();
+})();
+
+function showAccountContent() {
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('account-content').style.display = 'block';
+
+  const strip = document.getElementById('user-strip');
+  strip.style.display = 'flex';
+  document.getElementById('user-strip-name').textContent = currentUser.display_name;
+  const avatar = document.getElementById('user-avatar');
+  if (currentUser.avatar_url) {
+    avatar.src = currentUser.avatar_url;
+  } else {
+    avatar.style.display = 'none';
+  }
+}
+
+// ── Tokens ───────────────────────────────────────────────────────────────────
+
+async function loadTokens() {
+  const res = await fetch('/account/tokens');
+  if (!res.ok) return;
+  const tokens = await res.json();
+  renderTokenList(tokens);
+  document.getElementById('token-count-label').textContent = `${tokens.length} / 10`;
+}
+
+function renderTokenList(tokens) {
+  const list = document.getElementById('token-list');
+  if (tokens.length === 0) {
+    list.innerHTML = '<div class="empty-state">No tokens yet — create one above.</div>';
+    return;
+  }
+  list.innerHTML = tokens.map(t => `
+    <div class="token-item" id="token-item-${t.id}">
+      <div class="token-item-icon">⌁</div>
+      <div class="token-item-info">
+        <div class="token-item-name">${escHtml(t.name)}</div>
+        <div class="token-item-meta">${escHtml(t.token_prefix)}… · created ${fmtDate(t.created_at)}</div>
+      </div>
+      <div class="token-item-stats">
+        ${t.request_count > 0 ? `${t.request_count.toLocaleString()} requests` : 'Never used'}
+        ${t.last_used_at ? `<br><span style="color:var(--text-dim)">last ${fmtDate(t.last_used_at)}</span>` : ''}
+      </div>
+      <button class="btn-revoke" onclick="revokeToken(${t.id})">Revoke</button>
+    </div>
+  `).join('');
+}
+
+async function createToken() {
+  const input = document.getElementById('token-name-input');
+  const btn   = document.getElementById('create-btn');
+  const err   = document.getElementById('create-err');
+  const name  = input.value.trim();
+
+  err.style.display = 'none';
+  if (!name) { showErr('Please enter a name for the token.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  const res  = await fetch('/account/tokens', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ name }),
+  });
+  const data = await res.json();
+  btn.disabled = false;
+  btn.textContent = 'Generate token';
+
+  if (!res.ok) { showErr(data.error || 'Failed to create token.'); return; }
+
+  // Show the raw token
+  input.value = '';
+  const reveal = document.getElementById('token-reveal');
+  document.getElementById('token-raw-value').textContent = data.token;
+  reveal.style.display = 'block';
+  reveal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  loadTokens();
+}
+
+async function revokeToken(id) {
+  if (!confirm('Revoke this token? It will stop working immediately.')) return;
+  const res = await fetch(`/account/tokens/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    document.getElementById(`token-item-${id}`)?.remove();
+    loadTokens();
+    // Hide reveal banner if it was for this token
+    document.getElementById('token-reveal').style.display = 'none';
+  }
+}
+
+function copyToken() {
+  const val = document.getElementById('token-raw-value').textContent;
+  navigator.clipboard.writeText(val).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+
+async function logout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  window.location.href = '/';
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+
+function showErr(msg) {
+  const el = document.getElementById('create-err');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+</script>
+</body>
+</html>

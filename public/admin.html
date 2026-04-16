@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Poetmap Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0e0d; --surface: #161513; --surface2: #1e1c1a; --surface3: #252220;
+      --border: rgba(255,255,255,0.08); --text: #e8e2d9; --text-muted: #7a7368;
+      --text-dim: #4a4540; --accent: #c9a96e; --accent-dim: rgba(201,169,110,.15);
+      --red: #c96e6e; --red-dim: rgba(201,110,110,.12);
+      --green: #6ec98a; --green-dim: rgba(110,201,138,.12);
+      --amber: #c9a96e; --blue: #6e9ec9;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html,body { height:100%; font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+
+    /* ── Layout ── */
+    .shell { display:grid; grid-template-columns:220px 1fr; height:100vh; }
+
+    /* ── Sidebar ── */
+    .nav { background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; }
+    .nav-brand { padding:20px 18px 14px; border-bottom:1px solid var(--border); }
+    .nav-brand h1 { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--text); }
+    .nav-brand span { font-family:'DM Mono',monospace; font-size:.58rem; color:var(--red); letter-spacing:.1em; text-transform:uppercase; }
+    .nav-items { padding:10px 8px; flex:1; display:flex; flex-direction:column; gap:2px; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:6px; cursor:pointer; font-size:.82rem; color:var(--text-muted); transition:all .15s; border:none; background:none; width:100%; text-align:left; }
+    .nav-item:hover { background:var(--surface2); color:var(--text); }
+    .nav-item.active { background:var(--accent-dim); color:var(--accent); }
+    .nav-item .badge { margin-left:auto; background:var(--red); color:#fff; border-radius:10px; padding:1px 6px; font-size:.6rem; font-family:'DM Mono',monospace; }
+
+    /* ── Main ── */
+    .main { display:flex; flex-direction:column; overflow:hidden; }
+    .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 28px; display:flex; align-items:center; gap:12px; }
+    .topbar h2 { font-family:'Playfair Display',serif; font-size:1.15rem; }
+    .topbar .pill-warn { font-family:'DM Mono',monospace; font-size:.6rem; background:var(--red-dim); color:var(--red); border:1px solid var(--red); border-radius:4px; padding:3px 8px; letter-spacing:.06em; }
+    .content { flex:1; overflow-y:auto; padding:24px 28px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+
+    /* ── Stats bar ── */
+    .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:24px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; }
+    .stat-card .num { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--accent); line-height:1; }
+    .stat-card .label { font-family:'DM Mono',monospace; font-size:.58rem; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase; margin-top:4px; }
+
+    /* ── Tables ── */
+    .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    .table-toolbar { padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+    .table-toolbar input, .table-toolbar select { background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:6px 10px; font-size:.78rem; color:var(--text); outline:none; font-family:'DM Sans',sans-serif; }
+    .table-toolbar input:focus, .table-toolbar select:focus { border-color:var(--accent); }
+    table { width:100%; border-collapse:collapse; font-size:.8rem; }
+    th { font-family:'DM Mono',monospace; font-size:.58rem; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); padding:10px 14px; text-align:left; border-bottom:1px solid var(--border); background:var(--surface2); }
+    td { padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:var(--surface2); }
+
+    /* ── Badges ── */
+    .badge { display:inline-block; border-radius:4px; padding:2px 7px; font-family:'DM Mono',monospace; font-size:.6rem; letter-spacing:.04em; text-transform:uppercase; }
+    .badge-admin   { background:rgba(110,158,201,.15); color:var(--blue); }
+    .badge-curator { background:var(--accent-dim); color:var(--accent); }
+    .badge-user    { background:var(--surface3); color:var(--text-muted); }
+    .badge-banned  { background:var(--red-dim); color:var(--red); }
+    .badge-timeout { background:rgba(201,169,110,.12); color:var(--amber); }
+    .badge-pending  { background:rgba(201,169,110,.12); color:var(--amber); }
+    .badge-approved { background:var(--green-dim); color:var(--green); }
+    .badge-denied   { background:var(--red-dim); color:var(--red); }
+    .badge-deleted  { background:var(--surface3); color:var(--text-dim); }
+    .badge-auto     { border:1px solid rgba(110,201,138,.3); }
+
+    /* ── Karma pill ── */
+    .karma-val { font-family:'DM Mono',monospace; font-size:.78rem; color:var(--accent); }
+    .karma-val.low { color:var(--red); }
+    .karma-val.high { color:var(--green); }
+
+    /* ── Action buttons ── */
+    .btn { border:none; border-radius:5px; padding:5px 11px; font-size:.72rem; font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:opacity .15s; }
+    .btn-green  { background:var(--green-dim); color:var(--green); border:1px solid rgba(110,201,138,.25); }
+    .btn-red    { background:var(--red-dim);   color:var(--red);   border:1px solid rgba(201,110,110,.25); }
+    .btn-amber  { background:var(--accent-dim);color:var(--accent);border:1px solid rgba(201,169,110,.25); }
+    .btn-ghost  { background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); }
+    .btn:hover  { opacity:.8; }
+    .btn-row    { display:flex; gap:5px; flex-wrap:wrap; }
+
+    /* ── Modal ── */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; display:flex; align-items:center; justify-content:center; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:10px; width:480px; max-width:94vw; max-height:85vh; overflow-y:auto; }
+    .modal-head { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .modal-head h3 { font-family:'Playfair Display',serif; font-size:1rem; }
+    .modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:4px; width:24px; height:24px; cursor:pointer; color:var(--text-muted); font-size:.7rem; }
+    .modal-body { padding:18px 20px; display:flex; flex-direction:column; gap:14px; }
+    .modal-foot { padding:12px 20px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end; }
+    .form-group label { display:block; font-family:'DM Mono',monospace; font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; }
+    .form-group input, .form-group select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:.82rem; color:var(--text); outline:none; font-family:'DM Sans',sans-serif; }
+    .form-group input:focus, .form-group select:focus { border-color:var(--accent); }
+
+    /* ── Contrib detail ── */
+    .contrib-detail { background:var(--surface2); border-radius:6px; padding:12px 14px; font-size:.78rem; line-height:1.7; }
+    .contrib-detail strong { color:var(--text-muted); font-family:'DM Mono',monospace; font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; display:block; margin-bottom:2px; }
+
+    /* ── Empty state ── */
+    .empty { text-align:center; padding:40px; color:var(--text-dim); font-style:italic; font-family:'Playfair Display',serif; }
+
+    /* ── Toast ── */
+    #toast { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+    .toast-item { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:10px 16px; font-size:.8rem; min-width:220px; animation:slideIn .2s ease; }
+    .toast-item.ok  { border-color:rgba(110,201,138,.4); color:var(--green); }
+    .toast-item.err { border-color:rgba(201,110,110,.4); color:var(--red); }
+    @keyframes slideIn { from { transform:translateX(20px); opacity:0 } to { transform:translateX(0); opacity:1 } }
+
+    .hidden { display:none !important; }
+    .view { display:none; }
+    .view.active { display:block; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Nav -->
+  <nav class="nav">
+    <div class="nav-brand">
+      <h1>Poetmap</h1>
+      <span>⬡ Admin Panel</span>
+    </div>
+    <div class="nav-items">
+      <button class="nav-item active" onclick="showView('dashboard')">◈ Dashboard</button>
+      <button class="nav-item" onclick="showView('users')">◎ Users</button>
+      <button class="nav-item" onclick="showView('contributions')">
+        ✦ Contributions
+        <span class="badge" id="nav-pending-badge" style="display:none"></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <h2 id="topbar-title">Dashboard</h2>
+      <span class="pill-warn">localhost only</span>
+    </div>
+    <div class="content">
+
+      <!-- Dashboard -->
+      <div id="view-dashboard" class="view active">
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card"><div class="num" id="s-users">—</div><div class="label">Users</div></div>
+          <div class="stat-card"><div class="num" id="s-poets">—</div><div class="label">Poets</div></div>
+          <div class="stat-card"><div class="num" id="s-pending" style="color:var(--amber)">—</div><div class="label">Pending</div></div>
+          <div class="stat-card"><div class="num" id="s-approved" style="color:var(--green)">—</div><div class="label">Approved</div></div>
+          <div class="stat-card"><div class="num" id="s-denied" style="color:var(--red)">—</div><div class="label">Denied</div></div>
+        </div>
+        <p style="color:var(--text-dim);font-size:.78rem;font-style:italic;font-family:'Playfair Display',serif">
+          Use the sidebar to manage users and contributions.
+        </p>
+      </div>
+
+      <!-- Users -->
+      <div id="view-users" class="view">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <input id="user-search" placeholder="Search name or email…" oninput="filterUsers()" style="flex:1" />
+            <select id="user-role-filter" onchange="filterUsers()">
+              <option value="">All roles</option>
+              <option value="user">User</option>
+              <option value="curator">Curator</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <table>
+            <thead><tr>
+              <th>User</th><th>Provider</th><th>Role</th><th>Karma</th><th>Status</th><th>Joined</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Contributions -->
+      <div id="view-contributions" class="view">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <select id="contrib-status-filter" onchange="loadContributions()" style="width:140px">
+              <option value="">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="denied">Denied</option>
+            </select>
+            <input id="contrib-search" placeholder="Search poet name…" oninput="filterContributions()" style="flex:1" />
+          </div>
+          <table>
+            <thead><tr>
+              <th>Poet</th><th>Location</th><th>Submitted by</th><th>Karma</th><th>Status</th><th>Date</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="contribs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-backdrop hidden" id="user-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="um-title">Edit User</h3>
+      <button class="modal-close" onclick="closeUserModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="um-role">
+          <option value="user">user</option>
+          <option value="curator">curator</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Karma (set absolute value)</label>
+        <input type="number" id="um-karma" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Banned</label>
+        <select id="um-banned">
+          <option value="false">No</option>
+          <option value="true">Yes — banned</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Timeout until (leave blank to clear)</label>
+        <input type="datetime-local" id="um-timeout" />
+      </div>
+      <div id="um-karma-log" style="font-size:.74rem;color:var(--text-muted);max-height:140px;overflow-y:auto;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-red" onclick="deleteUser()">Delete user</button>
+      <button class="btn btn-ghost" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-green" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Contribution detail modal -->
+<div class="modal-backdrop hidden" id="contrib-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="cm-title">Contribution</h3>
+      <button class="modal-close" onclick="closeContribModal()">✕</button>
+    </div>
+    <div class="modal-body" id="cm-body"></div>
+    <div class="modal-foot" id="cm-foot"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let allUsers = [], allContribs = [];
+let editingUserId = null, editingContribId = null;
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.textContent = msg;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── Views ─────────────────────────────────────────────────────────────────────
+const viewTitles = { dashboard: 'Dashboard', users: 'Users', contributions: 'Contributions' };
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b => {
+    if (b.textContent.toLowerCase().includes(name.slice(0,4))) b.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent = viewTitles[name];
+  if (name === 'users') loadUsers();
+  if (name === 'contributions') loadContributions();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const s = await api('GET', '/admin/api/stats');
+  if (!s) return;
+  document.getElementById('s-users').textContent   = s.users;
+  document.getElementById('s-poets').textContent   = s.poets;
+  document.getElementById('s-pending').textContent  = s.pending;
+  document.getElementById('s-approved').textContent = s.approved;
+  document.getElementById('s-denied').textContent   = s.denied;
+  const b = document.getElementById('nav-pending-badge');
+  if (s.pending > 0) { b.textContent = s.pending; b.style.display = ''; }
+  else b.style.display = 'none';
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+function karmaClass(k) { return k >= 50 ? 'high' : k < 10 ? 'low' : ''; }
+function roleBadge(u) {
+  const cls = `badge badge-${u.role}`;
+  return `<span class="${cls}">${u.role}</span>`;
+}
+function statusBadge(u) {
+  if (u.banned) return `<span class="badge badge-banned">banned</span>`;
+  if (u.timeout_until && new Date(u.timeout_until) > new Date())
+    return `<span class="badge badge-timeout">timeout</span>`;
+  return `<span style="color:var(--text-dim);font-size:.7rem">—</span>`;
+}
+
+async function loadUsers() {
+  allUsers = await api('GET', '/admin/api/users') || [];
+  renderUsers(allUsers);
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('users-tbody');
+  if (!users.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty">No users found</div></td></tr>`; return; }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${u.avatar_url ? `<img src="${esc(u.avatar_url)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" />` : ''}
+          <div>
+            <div style="font-weight:500">${esc(u.display_name)}</div>
+            <div style="font-size:.68rem;color:var(--text-dim)">${esc(u.email||'')}</div>
+          </div>
+        </div>
+      </td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--text-muted)">${esc(u.provider)}</span></td>
+      <td>${roleBadge(u)}</td>
+      <td><span class="karma-val ${karmaClass(u.karma)}">${u.karma}</span></td>
+      <td>${statusBadge(u)}</td>
+      <td style="font-size:.72rem;color:var(--text-dim)">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td>
+        <div class="btn-row">
+          <button class="btn btn-amber" onclick="openUserModal(${u.id})">Edit</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const r = document.getElementById('user-role-filter').value;
+  renderUsers(allUsers.filter(u =>
+    (!q || (u.display_name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q)) &&
+    (!r || u.role === r)
+  ));
+}
+
+async function openUserModal(id) {
+  const u = await api('GET', `/admin/api/users/${id}`);
+  editingUserId = id;
+  document.getElementById('um-title').textContent = u.display_name;
+  document.getElementById('um-role').value   = u.role;
+  document.getElementById('um-karma').value  = u.karma;
+  document.getElementById('um-banned').value = String(u.banned);
+  document.getElementById('um-timeout').value = u.timeout_until
+    ? new Date(u.timeout_until).toISOString().slice(0,16) : '';
+  const log = u.karma_log.map(l =>
+    `<div style="padding:3px 0;border-bottom:1px solid var(--border)">
+      <span style="color:${l.delta>=0?'var(--green)':'var(--red)'}">${l.delta>=0?'+':''}${l.delta}</span>
+      <span style="margin-left:8px">${esc(l.reason)}</span>
+      <span style="float:right;color:var(--text-dim)">${new Date(l.created_at).toLocaleDateString()}</span>
+    </div>`
+  ).join('') || '<div style="color:var(--text-dim)">No karma history</div>';
+  document.getElementById('um-karma-log').innerHTML = `<div style="margin-bottom:6px;font-family:\'DM Mono\',monospace;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)">Karma Log</div>${log}`;
+  document.getElementById('user-modal').classList.remove('hidden');
+}
+
+function closeUserModal() {
+  document.getElementById('user-modal').classList.add('hidden');
+  editingUserId = null;
+}
+
+async function saveUser() {
+  const role    = document.getElementById('um-role').value;
+  const karma   = parseInt(document.getElementById('um-karma').value);
+  const banned  = document.getElementById('um-banned').value === 'true';
+  const timeout = document.getElementById('um-timeout').value || null;
+  const res = await api('PATCH', `/admin/api/users/${editingUserId}`, {
+    role, karma, banned, timeout_until: timeout ? new Date(timeout).toISOString() : null
+  });
+  if (res?.error) { toast(res.error, 'err'); return; }
+  toast('User updated');
+  closeUserModal();
+  loadUsers();
+  loadStats();
+}
+
+async function deleteUser() {
+  if (!confirm('Permanently delete this user? This cannot be undone.')) return;
+  await api('DELETE', `/admin/api/users/${editingUserId}`);
+  toast('User deleted');
+  closeUserModal();
+  loadUsers();
+  loadStats();
+}
+
+// ── Contributions ─────────────────────────────────────────────────────────────
+async function loadContributions() {
+  const status = document.getElementById('contrib-status-filter').value;
+  allContribs = await api('GET', `/admin/api/contributions${status ? '?status='+status : ''}`) || [];
+  filterContributions();
+}
+
+function filterContributions() {
+  const q = document.getElementById('contrib-search').value.toLowerCase();
+  renderContribs(allContribs.filter(c =>
+    !q || (c.poet_name||'').toLowerCase().includes(q)
+  ));
+}
+
+function contribStatusBadge(c) {
+  const auto = c.auto_approved ? ' badge-auto' : '';
+  return `<span class="badge badge-${c.status}${auto}">${c.status}${c.auto_approved?' ⚡':''}</span>`;
+}
+
+function renderContribs(list) {
+  const tbody = document.getElementById('contribs-tbody');
+  if (!list.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty">No contributions</div></td></tr>`; return; }
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td style="font-weight:500">${esc(c.poet_name)}</td>
+      <td style="font-size:.75rem;color:var(--text-muted)">${esc(c.place_name)}</td>
+      <td>
+        <div style="font-size:.78rem">${esc(c.submitter_name)}</div>
+      </td>
+      <td><span class="karma-val ${karmaClass(c.submitter_karma)}">${c.submitter_karma}</span></td>
+      <td>${contribStatusBadge(c)}</td>
+      <td style="font-size:.72rem;color:var(--text-dim)">${new Date(c.submitted_at).toLocaleDateString()}</td>
+      <td>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="openContribModal(${c.id})">View</button>
+          ${c.status==='pending' ? `
+            <button class="btn btn-green" onclick="approveContrib(${c.id})">✓</button>
+            <button class="btn btn-red"   onclick="denyContrib(${c.id})">✗</button>
+          ` : ''}
+          <button class="btn btn-red" onclick="deleteContrib(${c.id})" title="Hard delete">⌫</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function openContribModal(id) {
+  const c = allContribs.find(x => x.id === id);
+  editingContribId = id;
+  document.getElementById('cm-title').textContent = c.poet_name;
+  document.getElementById('cm-body').innerHTML = `
+    <div class="contrib-detail">
+      <strong>Poet</strong>${esc(c.poet_name)}
+      ${c.poet_bio ? `<br><strong>Bio</strong>${esc(c.poet_bio)}` : ''}
+      ${c.poet_wiki_url ? `<br><strong>Wiki</strong><a href="${esc(c.poet_wiki_url)}" target="_blank" style="color:var(--accent)">${esc(c.poet_wiki_url)}</a>` : ''}
+    </div>
+    <div class="contrib-detail">
+      <strong>Location</strong>${esc(c.place_name)}
+      <br><strong>Type</strong>${esc(c.location_type)}
+      <br><strong>Coords</strong>${c.lat}, ${c.lng}
+    </div>
+    <div class="contrib-detail">
+      <strong>Submitted by</strong>${esc(c.submitter_name)} · karma ${c.submitter_karma}
+      <br><strong>Status</strong>${c.status}${c.auto_approved?' (auto-approved ⚡)':''}
+      <br><strong>Date</strong>${new Date(c.submitted_at).toLocaleString()}
+    </div>
+  `;
+  const foot = document.getElementById('cm-foot');
+  foot.innerHTML = `<button class="btn btn-ghost" onclick="closeContribModal()">Close</button>`;
+  if (c.status === 'pending') {
+    foot.innerHTML += `
+      <button class="btn btn-red" onclick="denyContrib(${id});closeContribModal()">Deny</button>
+      <button class="btn btn-green" onclick="approveContrib(${id});closeContribModal()">Approve</button>
+    `;
+  }
+  foot.innerHTML += `<button class="btn btn-red" onclick="deleteContrib(${id});closeContribModal()" style="margin-left:auto">Hard delete</button>`;
+  document.getElementById('contrib-modal').classList.remove('hidden');
+}
+
+function closeContribModal() {
+  document.getElementById('contrib-modal').classList.add('hidden');
+}
+
+async function approveContrib(id) {
+  const r = await api('POST', `/admin/api/contributions/${id}/approve`);
+  if (r?.error) { toast(r.error, 'err'); return; }
+  toast('Contribution approved ✓');
+  loadContributions(); loadStats();
+}
+async function denyContrib(id) {
+  const r = await api('POST', `/admin/api/contributions/${id}/deny`);
+  if (r?.error) { toast(r.error, 'err'); return; }
+  toast('Contribution denied');
+  loadContributions(); loadStats();
+}
+async function deleteContrib(id) {
+  if (!confirm('Hard-delete this contribution? Karma will be deducted.')) return;
+  await api('DELETE', `/admin/api/contributions/${id}`);
+  toast('Contribution deleted');
+  loadContributions(); loadStats();
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadStats();
+</script>
+</body>
+</html>
