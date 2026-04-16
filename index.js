@@ -1,7 +1,10 @@
 require('dotenv').config();
 const express  = require('express');
 const session  = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+
 const { passport, router: authRouter } = require('./auth');
+const pool = require('./db');
 const { apiRateLimit } = require('./apiAuth');
 
 const app  = express();
@@ -11,12 +14,18 @@ app.use(express.json());
 
 // ── Sessions (required for Passport) ────────────────────────────────────────
 app.use(session({
-  secret:            process.env.SESSION_SECRET || 'change-me-in-env',
-  resave:            false,
+  store: new pgSession({
+    pool: pool,
+    tableName: 'session'
+  }),
+  secret: process.env.SESSION_SECRET || 'change-me-in-env',
+  resave: false,
   saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
 }));
-
 // ── Passport ─────────────────────────────────────────────────────────────────
 app.use(passport.initialize());
 app.use(passport.session());
