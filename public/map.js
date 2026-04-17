@@ -3,6 +3,11 @@
 //  Full-featured poet map with sidebars, search, filter, contribute
 // ============================================================
 
+const DEBUG_AUTH = true;
+
+function logAuth(...args) {
+  if (DEBUG_AUTH) console.log('[AUTH]', ...args);
+}
 // ── State ──────────────────────────────────────────────────
 
 let allPoets = [];
@@ -95,8 +100,8 @@ function renderAllMarkers() {
 
       const color = typeColor(loc.location_type);
       const icon = L.divIcon({
-        html: `<div class="custom-marker" style="width:12px;height:12px;background:${color};"></div>`,
-        className: '',
+        html: `<div class="custom-marker" style="width:12px;height:12px;background:${color};border-radius:50%;box-shadow:0 0 0 2px rgba(0,0,0,0.4);"></div>`,
+        className: 'custom-marker-wrapper',
         iconSize: [12, 12],
         iconAnchor: [6, 6],
       });
@@ -159,10 +164,16 @@ function setMarkerHighlight(poetId, on) {
       inner.classList.add('selected');
       inner.style.width = '16px';
       inner.style.height = '16px';
+      inner.style.borderRadius = '50%';
+      inner.style.outline = '2px solid rgba(255,255,255,0.6)';
+      inner.style.outlineOffset = '1px';
     } else {
       inner.classList.remove('selected');
       inner.style.width = '12px';
       inner.style.height = '12px';
+      inner.style.borderRadius = '50%';
+      inner.style.outline = '';
+      inner.style.outlineOffset = '';
     }
   });
 }
@@ -230,7 +241,7 @@ function renderPoetList() {
   const list = document.getElementById('poet-list');
   const countEl = document.getElementById('poet-count');
 
-  const poets = filteredPoets.length || filteredPoets === allPoets ? filteredPoets : allPoets;
+  const poets = filteredPoets;
   countEl.textContent = poets.length;
 
   if (!poets.length) {
@@ -257,12 +268,89 @@ function renderPoetList() {
 
 // ── Search & filter ────────────────────────────────────────
 
+let searchGeoOrigin = false; // true when origin was set by a location search
+let geocodeDebounceTimer = null;
+
+// Called on every keypress in the search box (oninput)
 function filterPoets() {
-  const q = document.getElementById('poet-search').value.trim().toLowerCase();
+  clearTimeout(geocodeDebounceTimer);
+  const q = document.getElementById('poet-search').value.trim();
+
+  // If box is empty, clear everything and show all
+  if (!q) {
+    if (searchGeoOrigin) clearSearchGeoOrigin();
+    applyFilters('');
+    return;
+  }
+
+  // Immediate name-match pass so the list responds instantly
+  const nameMatches = allPoets.filter(p => p.name && p.name.toLowerCase().includes(q.toLowerCase()));
+
+  if (nameMatches.length) {
+    // Good name hits — show them right away, cancel any pending geocode
+    if (searchGeoOrigin) clearSearchGeoOrigin();
+    applyFilters(q);
+  } else {
+    // No name hits — debounce a geocode attempt (400 ms)
+    geocodeDebounceTimer = setTimeout(() => geocodeSearchQuery(q), 400);
+  }
+}
+
+// Geocode the query and use result as distance-filter origin
+async function geocodeSearchQuery(q) {
+  const hint = document.getElementById('filter-hint');
+  hint.textContent = 'Searching location…';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+
+    // Bail if the input has changed while we were fetching
+    const current = document.getElementById('poet-search').value.trim();
+    if (current.toLowerCase() !== q.toLowerCase()) return;
+
+    if (!data.length) {
+      hint.textContent = 'Location not found — try a place name or poet name';
+      applyFilters(q); // fall back to empty name filter
+      return;
+    }
+
+    const place = data[0];
+    const latlng = { lat: parseFloat(place.lat), lng: parseFloat(place.lon) };
+    const shortName = place.display_name.split(',').slice(0, 2).join(',').trim();
+
+    searchGeoOrigin = true;
+    setOrigin(latlng); // sets originLatLng, marker, circle, enables slider
+    hint.textContent = `Showing poets near ${shortName}`;
+    // Fly the map to the found location
+    map.flyTo([latlng.lat, latlng.lng], 6, { animate: true, duration: 1.0 });
+    // applyFilters is called inside setOrigin → updateDistanceFilter → filterPoets loop,
+    // but we skip name filtering since this is a geo search
+    applyFilters('');
+  } catch (err) {
+    document.getElementById('filter-hint').textContent = 'Geocoding failed';
+    applyFilters(q);
+  }
+}
+
+// Clear an origin that was set by a location search
+function clearSearchGeoOrigin() {
+  searchGeoOrigin = false;
+  originLatLng = null;
+  if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
+  if (radiusCircle) { map.removeLayer(radiusCircle); radiusCircle = null; }
+  document.getElementById('dist-slider').disabled = true;
+  document.getElementById('filter-hint').textContent = 'Click a point on the map to set origin';
+  document.getElementById('btn-clear-filter').style.display = 'none';
+}
+
+// Core filter + render — applies name query + distance origin
+function applyFilters(nameQuery) {
   let result = allPoets;
 
-  if (q) {
-    result = result.filter(p => p.name && p.name.toLowerCase().includes(q));
+  if (nameQuery) {
+    result = result.filter(p => p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
   }
 
   if (originLatLng) {
@@ -277,21 +365,25 @@ function filterPoets() {
 
   filteredPoets = result;
   renderPoetList();
-  dimUnfilteredMarkers();
+  updateVisibleMarkers();
 }
 
-function dimUnfilteredMarkers() {
+function updateVisibleMarkers() {
+  const isFiltered = originLatLng || document.getElementById('poet-search').value.trim();
   const visibleIds = new Set(filteredPoets.map(p => p.id));
+
+  // Remove all markers from cluster, then re-add only the visible ones.
+  // This is necessary because leaflet.markercluster hides markers in the DOM
+  // when clustered, making opacity changes ineffective on invisible elements.
+  clusters.clearLayers();
 
   allPoets.forEach(poet => {
     const markers = markerMap.get(poet.id);
     if (!markers) return;
-    const visible = visibleIds.has(poet.id) || !originLatLng && !document.getElementById('poet-search').value;
-    markers.forEach(m => {
-      const el = m.getElement();
-      if (!el) return;
-      el.style.opacity = visible ? '1' : '0.15';
-    });
+    const visible = !isFiltered || visibleIds.has(poet.id);
+    if (visible) {
+      markers.forEach(m => clusters.addLayer(m));
+    }
   });
 }
 
@@ -311,11 +403,12 @@ function updateDistanceFilter() {
       dashArray: '4 4',
     }).addTo(map);
 
-    filterPoets();
+    applyFilters(searchGeoOrigin ? '' : document.getElementById('poet-search').value.trim());
   }
 }
 
 function clearDistanceFilter() {
+  searchGeoOrigin = false;
   originLatLng = null;
   if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
   if (radiusCircle) { map.removeLayer(radiusCircle); radiusCircle = null; }
@@ -324,13 +417,13 @@ function clearDistanceFilter() {
   document.getElementById('filter-hint').textContent = 'Click a point on the map to set origin';
   document.getElementById('btn-clear-filter').style.display = 'none';
 
-  // Reset opacity
-  markerMap.forEach(markers => markers.forEach(m => {
-    const el = m.getElement();
-    if (el) el.style.opacity = '1';
-  }));
+  // If the search box triggered this origin, clear the box too
+  const searchBox = document.getElementById('poet-search');
+  if (searchBox && searchBox.value.trim()) {
+    searchBox.value = '';
+  }
 
-  filterPoets();
+  applyFilters('');
 }
 
 // Click on map to set origin
@@ -361,21 +454,27 @@ function setOrigin(latlng) {
 
 // ── Views ──────────────────────────────────────────────────
 
-function switchView(view) {
+function switchView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('view-active'));
-  document.getElementById(`view-${view}`).classList.add('view-active');
+  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
 
-  document.querySelectorAll('.nav-link').forEach(l => {
-    l.classList.toggle('active', l.dataset.view === view);
-  });
+  const view = document.getElementById('view-' + name);
+  if (view) view.classList.add('view-active');
 
-  // Show/hide right sidebar only on map
+  const link = document.querySelector(`.nav-link[data-view="${name}"]`);
+  if (link) link.classList.add('active');
+
+  // Right sidebar: hide when on full-width views
   const rightSidebar = document.getElementById('sidebar-right');
-  rightSidebar.style.display = view === 'map' ? '' : 'none';
+  if (rightSidebar) {
+    rightSidebar.style.display = (name === 'contribute' || name === 'curator') ? 'none' : '';
+  }
 
-  if (view === 'map') {
+  if (name === 'map') {
     setTimeout(() => map.invalidateSize(), 50);
   }
+
+  if (name === 'curator') loadCuratorQueue();
 }
 
 // ── Sidebar toggles ────────────────────────────────────────
@@ -599,9 +698,6 @@ function esc(s) {
 filteredPoets = allPoets; // start with all
 loadPoets();
 
-// Keep filtered list in sync after load
-const origLoad = loadPoets;
-
 
 // ── Auth ───────────────────────────────────────────────────
 
@@ -609,11 +705,19 @@ let currentUser = null;
 
 async function initAuth() {
   try {
-    const res = await fetch('/auth/me');
+    const res = await fetch('/auth/me', { credentials: 'include' });
+    logAuth('/auth/me status:', res.status);
+
     if (res.ok) {
       currentUser = await res.json();
+      logAuth('user loaded:', currentUser);
+    } else {
+      logAuth('not authenticated');
     }
-  } catch (_) {}
+  } catch (e) {
+    logAuth('auth error:', e);
+  }
+
   renderAuthSection();
   renderContributeGate();
 }
@@ -646,16 +750,36 @@ function renderAuthSection() {
   }
 }
 
+// ── renderContributeGate ───────────────────────────────────
+// Defined once — handles both the contribute form gate AND
+// the curator nav link visibility. No patching needed.
+
 function renderContributeGate() {
   const gate = document.getElementById('contribute-auth-gate');
   const form = document.getElementById('contribute-form');
-  if (!gate || !form) return;
-  if (currentUser) {
-    gate.style.display = 'none';
-    form.style.display = '';
+  const tabs = document.getElementById('contribute-tabs');
+  if (gate && form) {
+    if (currentUser) {
+      gate.style.display = 'none';
+      form.style.display = '';
+      if (tabs) tabs.style.display = '';
+    } else {
+      gate.style.display = '';
+      form.style.display = 'none';
+      if (tabs) tabs.style.display = 'none';
+      // Also hide edit form
+      const ef = document.getElementById('edit-form');
+      if (ef) ef.style.display = 'none';
+    }
+  }
+
+  const curatorNav = document.getElementById('nav-curator');
+  if (!curatorNav) return;
+  if (currentUser && (currentUser.role === 'curator' || currentUser.role === 'admin')) {
+    curatorNav.classList.remove('hidden');
+    loadCuratorQueue(); // pre-load badge count
   } else {
-    gate.style.display = '';
-    form.style.display = 'none';
+    curatorNav.classList.add('hidden');
   }
 }
 
@@ -692,17 +816,41 @@ async function loadCuratorQueue() {
     return;
   }
 
-  el.innerHTML = items.map(c => `
+  el.innerHTML = items.map(c => {
+    const isEdit = c.contribution_type === 'edit';
+
+    // Build works diff display for edit contributions
+    let worksDiffHtml = '';
+    if (isEdit && c.edit_payload) {
+      const payload = typeof c.edit_payload === 'string' ? JSON.parse(c.edit_payload) : c.edit_payload;
+      const works = payload.works || [];
+      if (works.length) {
+        const rows = works.map(w => {
+          if (w._delete) return `<div class="diff-row diff-remove">− ${esc(w.title)}</div>`;
+          if (!w.id)     return `<div class="diff-row diff-add">+ ${esc(w.title)}${w.year ? ` (${w.year})` : ''}</div>`;
+          return `<div class="diff-row diff-edit">~ ${esc(w.title)}${w.year ? ` (${w.year})` : ''}</div>`;
+        }).join('');
+        worksDiffHtml = `<div class="queue-works-diff">${rows}</div>`;
+      }
+    }
+
+    return `
     <div class="queue-card" id="qcard-${c.id}">
       <div>
-        <div class="queue-poet-name">${esc(c.poet_name)}</div>
+        <div class="queue-poet-name">
+          ${esc(c.poet_name)}
+          ${isEdit ? '<span class="queue-type-badge">edit</span>' : ''}
+        </div>
         <div class="queue-meta">
-          <span class="queue-tag">Location <span>${esc(c.place_name)}</span></span>
-          <span class="queue-tag">Type <span>${esc(c.location_type)}</span></span>
-          <span class="queue-tag">Coords <span>${Number(c.lat).toFixed(4)}, ${Number(c.lng).toFixed(4)}</span></span>
+          ${!isEdit ? `
+            <span class="queue-tag">Location <span>${esc(c.place_name)}</span></span>
+            <span class="queue-tag">Type <span>${esc(c.location_type)}</span></span>
+            <span class="queue-tag">Coords <span>${Number(c.lat).toFixed(4)}, ${Number(c.lng).toFixed(4)}</span></span>
+          ` : ''}
           ${c.poet_wiki_url ? `<a href="${esc(c.poet_wiki_url)}" target="_blank" class="queue-tag" style="color:var(--accent);text-decoration:none">Wiki ↗</a>` : ''}
         </div>
         ${c.poet_bio ? `<div class="queue-bio">${esc(c.poet_bio)}</div>` : ''}
+        ${worksDiffHtml}
         <div class="queue-submitter">
           ${c.submitter_avatar ? `<img src="${esc(c.submitter_avatar)}" />` : ''}
           ${esc(c.submitter_name)}
@@ -715,7 +863,7 @@ async function loadCuratorQueue() {
         <button class="queue-btn queue-btn-deny"    onclick="curatorAction(${c.id},'deny',this)">✗ Deny</button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 async function curatorAction(id, action, btn) {
@@ -724,7 +872,7 @@ async function curatorAction(id, action, btn) {
   const card = document.getElementById(`qcard-${id}`);
   if (res.ok) {
     card.style.transition = 'opacity .3s, transform .3s';
-    card.style.opacity = '0';
+    card.style.opacity = '.3';
     card.style.transform = 'translateX(20px)';
     setTimeout(() => { card.remove(); checkQueueEmpty(); }, 300);
     // Update curator badge count
@@ -745,40 +893,201 @@ function checkQueueEmpty() {
     el.innerHTML = `<div class="queue-empty">✦ Queue is empty — all caught up.</div>`;
   }
 }
+// ── Contribute tab switching ────────────────────────────────────────────────
 
-// ── Extend switchView to handle curator ────────────────────────────────────
-
-const _origSwitchView = typeof switchView === 'function' ? switchView : null;
-
-function switchView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('view-active'));
-  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
-
-  const view = document.getElementById('view-' + name);
-  if (view) view.classList.add('view-active');
-
-  const link = document.querySelector(`.nav-link[data-view="${name}"]`);
-  if (link) link.classList.add('active');
-
-  // Right sidebar: hide when on full-width views
-  const rightSidebar = document.getElementById('sidebar-right');
-  if (rightSidebar) {
-    rightSidebar.style.display = (name === 'contribute' || name === 'curator') ? 'none' : '';
-  }
-
-  if (name === 'curator') loadCuratorQueue();
+function switchContributeTab(tab) {
+  document.getElementById('tab-add').classList.toggle('active', tab === 'add');
+  document.getElementById('tab-edit').classList.toggle('active', tab === 'edit');
+  document.getElementById('contribute-form').style.display = tab === 'add' ? '' : 'none';
+  document.getElementById('edit-form').style.display = tab === 'edit' ? '' : 'none';
 }
 
-// Patch renderContributeGate to also show/hide curator link
-const _origRenderGate = renderContributeGate;
-function renderContributeGate() {
-  _origRenderGate && _origRenderGate();
-  const curatorNav = document.getElementById('nav-curator');
-  if (!curatorNav) return;
-  if (currentUser && (currentUser.role === 'curator' || currentUser.role === 'admin')) {
-    curatorNav.classList.remove('hidden');
-    loadCuratorQueue(); // pre-load badge count
+// ── Edit poet — search ──────────────────────────────────────────────────────
+
+let editSearchTimer = null;
+
+function searchPoetForEdit() {
+  clearTimeout(editSearchTimer);
+  const q = document.getElementById('e-search').value.trim().toLowerCase();
+  const resultsEl = document.getElementById('e-search-results');
+  const listEl = document.getElementById('e-search-list');
+
+  if (!q) {
+    resultsEl.classList.add('hidden');
+    document.getElementById('e-poet-card').style.display = 'none';
+    return;
+  }
+
+  const matches = allPoets.filter(p => p.name && p.name.toLowerCase().includes(q)).slice(0, 8);
+
+  if (!matches.length) {
+    resultsEl.classList.remove('hidden');
+    listEl.innerHTML = `<div style="font-size:0.75rem;color:var(--text-dim);font-style:italic;padding:8px 0">No poets found</div>`;
+    return;
+  }
+
+  resultsEl.classList.remove('hidden');
+  listEl.innerHTML = matches.map(p => `
+    <div class="nearby-item" style="cursor:pointer" onclick="selectPoetForEdit(${p.id})">
+      <span class="nearby-name">${esc(p.name)}</span>
+      <span class="nearby-dist">${(p.works || []).filter(w => w && w.title).length} works</span>
+    </div>
+  `).join('');
+}
+
+// ── Edit poet — load selected poet into form ────────────────────────────────
+
+let editWorks = []; // working copy of works for this edit session
+
+async function selectPoetForEdit(poetId) {
+  document.getElementById('e-search-results').classList.add('hidden');
+
+  // Fetch full poet data (including works fresh from server)
+  let poet;
+  try {
+    const res = await fetch(`/api/poets/${poetId}`);
+    if (!res.ok) throw new Error('Failed to load poet');
+    poet = await res.json();
+  } catch (err) {
+    alert('Could not load poet data: ' + err.message);
+    return;
+  }
+
+  document.getElementById('e-search').value = poet.name;
+  document.getElementById('e-poet-id').value = poet.id;
+  document.getElementById('e-name').value = poet.name || '';
+  document.getElementById('e-bio').value = poet.bio || '';
+  document.getElementById('e-wiki').value = poet.wiki_url || '';
+  document.getElementById('e-image').value = poet.image_url || '';
+
+  // Build working works list
+  editWorks = (poet.works || [])
+    .filter(w => w && w.title)
+    .map(w => ({ ...w, _delete: false, _new: false }));
+
+  renderEditWorks();
+  document.getElementById('e-poet-card').style.display = '';
+  document.getElementById('e-submit-status').classList.add('hidden');
+}
+
+// ── Edit poet — works rendering ─────────────────────────────────────────────
+
+function renderEditWorks() {
+  const container = document.getElementById('e-works-list');
+  if (!editWorks.length) {
+    container.innerHTML = `<div style="font-size:0.75rem;color:var(--text-dim);font-style:italic;margin-bottom:8px">No works yet — add one below.</div>`;
+    return;
+  }
+
+  container.innerHTML = editWorks.map((w, i) => `
+    <div class="e-work-row${w._delete ? ' marked-delete' : ''}" id="ewr-${i}">
+      <div class="e-work-fields">
+        <div class="e-work-title-row">
+          <input class="form-input" placeholder="Title *" value="${esc(w.title || '')}"
+            oninput="editWorks[${i}].title = this.value" />
+          <input class="form-input" placeholder="Year" value="${esc(String(w.year || ''))}"
+            oninput="editWorks[${i}].year = this.value || null" style="width:80px" />
+        </div>
+        <input class="form-input" placeholder="Description" value="${esc(w.description || '')}"
+          oninput="editWorks[${i}].description = this.value || null" />
+        <input class="form-input" placeholder="URL" value="${esc(w.url || '')}"
+          oninput="editWorks[${i}].url = this.value || null" />
+      </div>
+      ${w._delete
+        ? `<button class="btn-remove-work" style="color:var(--text-muted)" onclick="undoRemoveWork(${i})">Undo</button>`
+        : `<button class="btn-remove-work" onclick="removeEditWork(${i})">${w._new ? '✕' : 'Remove'}</button>`
+      }
+    </div>
+  `).join('');
+}
+
+function addEditWork() {
+  editWorks.push({ id: null, title: '', year: null, description: null, url: null, _new: true, _delete: false });
+  renderEditWorks();
+  // Scroll to last work row and focus title input
+  const rows = document.querySelectorAll('.e-work-row');
+  if (rows.length) {
+    const last = rows[rows.length - 1];
+    last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const inp = last.querySelector('input');
+    if (inp) inp.focus();
+  }
+}
+
+function removeEditWork(i) {
+  if (editWorks[i]._new) {
+    editWorks.splice(i, 1);
   } else {
-    curatorNav.classList.add('hidden');
+    editWorks[i]._delete = true;
+  }
+  renderEditWorks();
+}
+
+function undoRemoveWork(i) {
+  editWorks[i]._delete = false;
+  renderEditWorks();
+}
+
+// ── Edit poet — submit ──────────────────────────────────────────────────────
+
+async function submitEdit() {
+  const poetId   = document.getElementById('e-poet-id').value;
+  const name     = document.getElementById('e-name').value.trim();
+  const bio      = document.getElementById('e-bio').value.trim();
+  const wiki_url = document.getElementById('e-wiki').value.trim();
+  const image_url= document.getElementById('e-image').value.trim();
+  const statusEl = document.getElementById('e-submit-status');
+
+  if (!poetId || !name) {
+    statusEl.className = 'submit-status error';
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = 'Please select a poet and ensure Name is filled in.';
+    return;
+  }
+
+  statusEl.className = 'submit-status';
+  statusEl.classList.remove('hidden');
+  statusEl.textContent = 'Submitting…';
+
+  // Build works payload: new works, edited works, and deletions
+  const works = editWorks.map(w => ({
+    id: w.id || null,
+    title: w.title,
+    year: w.year || null,
+    description: w.description || null,
+    url: w.url || null,
+    _delete: w._delete || false,
+  }));
+
+  try {
+    const res = await fetch('/api/contributions/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poet_id: poetId, poet_name: name, poet_bio: bio,
+                             poet_wiki_url: wiki_url, poet_image_url: image_url, works }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+
+    statusEl.className = 'submit-status success';
+    if (data.auto_approved) {
+      statusEl.textContent = `⚡ Changes to "${name}" applied immediately!`;
+      await loadPoets();
+    } else {
+      statusEl.textContent = `✦ Changes submitted for curator review. Thank you!`;
+    }
+
+    // Refresh karma
+    const me = await fetch('/auth/me');
+    if (me.ok) { currentUser = await me.json(); renderAuthSection(); }
+
+    // Reset form
+    document.getElementById('e-search').value = '';
+    document.getElementById('e-poet-card').style.display = 'none';
+    editWorks = [];
+
+  } catch (err) {
+    statusEl.className = 'submit-status error';
+    statusEl.textContent = `Error: ${err.message}`;
   }
 }

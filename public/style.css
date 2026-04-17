@@ -1194,3 +1194,130 @@ select.form-input option { background: var(--surface2); }
   .contribute-header { padding: 18px 20px; }
   .contribute-layout { padding: 20px; }
 }
+
+/* ── Contribute tabs ── */
+
+.contribute-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 40px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.contrib-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 12px 4px;
+  cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+  letter-spacing: 0.02em;
+  margin-bottom: -1px;
+}
+
+.contrib-tab:hover { color: var(--text); }
+
+.contrib-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Edit works list ── */
+
+.e-work-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: start;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: border-color 0.18s;
+}
+
+.e-work-row.marked-delete {
+  opacity: 0.45;
+  border-color: var(--red);
+  pointer-events: none;
+}
+
+.e-work-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.e-work-row .form-input {
+  font-size: 0.8rem;
+  padding: 6px 10px;
+}
+
+.e-work-title-row {
+  display: flex;
+  gap: 6px;
+}
+
+.e-work-title-row .form-input:first-child { flex: 1; }
+.e-work-title-row .form-input:last-child  { width: 80px; }
+
+.btn-remove-work {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  transition: background 0.15s;
+  white-space: nowrap;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.btn-remove-work:hover { background: rgba(201,110,110,0.12); }
+
+/* ── Curator edit badge ── */
+
+.queue-type-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-family: 'DM Mono', monospace;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(60,182,201,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(60,182,201,0.25);
+  margin-left: 8px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.queue-works-diff {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.queue-works-diff .diff-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.diff-add { color: var(--green); }
+.diff-remove { color: var(--red); }
+.diff-edit { color: var(--accent); }

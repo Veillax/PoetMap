@@ -51,7 +51,7 @@
 
       <div class="sidebar-section about-section">
         <h3 class="section-label">About</h3>
-        <p class="about-text">Poetmap traces the geography of poets — where they were born, where they lived, where they wrote. Every marker is a life lived in language.</p>
+        <p class="about-text">Poetmap connects poets to the places they came from and the places they wrote in. It's a way to see the real-world footprint behind the poetry.</p>
       </div>
 
       <div class="sidebar-section">
@@ -78,7 +78,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <p>Open-source · <a href="/docs">API Docs</a></p>
+        <p><a href="https://github.com/Veillax/PoetMap" target="_blank">Open-source</a> · <a href="/docs">API Docs</a></p> · <p><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>
       </div>
     </div>
   </aside>
@@ -93,8 +93,8 @@
     <div class="contribute-container">
       <div class="contribute-header">
         <button class="back-btn" onclick="switchView('map')">&#8592; Back to Map</button>
-        <h2 class="contribute-title">Add a Poet</h2>
-        <p class="contribute-sub">Help grow the cartography. Search for a location, find nearby poets, and submit a new entry.</p>
+        <h2 class="contribute-title">Contribute</h2>
+        <p class="contribute-sub">Add a new poet to the map, or edit an existing poet's details and works.</p>
       </div>
 
       <!-- Auth gate (shown when logged out) -->
@@ -121,6 +121,12 @@
             </a>
           </div>
         </div>
+      </div>
+
+      <!-- Mode tabs -->
+      <div id="contribute-tabs" class="contribute-tabs" style="display:none">
+        <button class="contrib-tab active" id="tab-add" onclick="switchContributeTab('add')">✦ Add Poet</button>
+        <button class="contrib-tab" id="tab-edit" onclick="switchContributeTab('edit')">✎ Edit Poet</button>
       </div>
 
       <!-- Contribute form (shown when logged in) -->
@@ -200,6 +206,49 @@
           <button class="btn-submit" onclick="submitPoet()">Submit Poet</button>
         </div>
       </div>
+
+      <!-- Edit Poet form -->
+      <div id="edit-form" class="contribute-layout" style="display:none">
+        <div class="contribute-card">
+          <h3 class="card-title">&#9901; Find a Poet</h3>
+          <div class="geo-search-row">
+            <input type="text" id="e-search" class="form-input" placeholder="Type a poet's name…" oninput="searchPoetForEdit()" autocomplete="off" />
+          </div>
+          <div id="e-search-results" class="nearby-poets hidden">
+            <div id="e-search-list" class="nearby-list"></div>
+          </div>
+        </div>
+
+        <div class="contribute-card" id="e-poet-card" style="display:none">
+          <h3 class="card-title">&#10022; Poet Details</h3>
+          <input type="hidden" id="e-poet-id" />
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" id="e-name" class="form-input" placeholder="Full name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea id="e-bio" class="form-input form-textarea" placeholder="A short biography"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Wikipedia / URL</label>
+            <input type="url" id="e-wiki" class="form-input" placeholder="https://en.wikipedia.org/wiki/…" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Image URL</label>
+            <input type="url" id="e-image" class="form-input" placeholder="https://…" />
+          </div>
+
+          <h3 class="card-title" style="margin-top:1.5rem">&#128218; Works</h3>
+          <p class="form-label" style="margin-bottom:10px;font-style:italic">Edit or remove existing works, or add new ones.</p>
+          <div id="e-works-list"></div>
+          <button class="btn-fill-coords" onclick="addEditWork()" style="margin-top:10px">+ Add work</button>
+
+          <div id="e-submit-status" class="submit-status hidden"></div>
+          <button class="btn-submit" onclick="submitEdit()">Submit Changes</button>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -262,5 +311,63 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="map.js"></script>
+
+  <!-- Analytics consent banner -->
+  <div id="analytics-banner" style="
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    max-width: 480px;
+    width: calc(100% - 40px);
+    z-index: 9999;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  ">
+    <span style="flex:1">
+      We use self-hosted analytics (<a href="/privacy#analytics" style="color:var(--accent);text-decoration:none">Tianji</a>) to measure page views. No personal data is sold or shared. <a href="/privacy" style="color:var(--accent);text-decoration:none">Learn more ↗</a>
+    </span>
+    <button onclick="dismissBanner()" style="
+      flex-shrink: 0;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 5px;
+      padding: 6px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.76rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    ">Got it</button>
+  </div>
+
+  <script>
+    (function() {
+      if (!localStorage.getItem('analyticsNoticeShown')) {
+        var banner = document.getElementById('analytics-banner');
+        if (banner) {
+          banner.style.display = 'flex';
+        }
+      }
+    })();
+    function dismissBanner() {
+      var banner = document.getElementById('analytics-banner');
+      if (banner) banner.style.display = 'none';
+      localStorage.setItem('analyticsNoticeShown', '1');
+    }
+  </script>
+
+  <script async defer src="https://analytics.veillax.com/tracker.js" data-website-id="cmm0gh1xh0011bmmjh85jt3me"></script>
 </body>
 </html>

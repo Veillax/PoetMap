@@ -12,17 +12,21 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+app.set('trust proxy', 1);
+
 // ── Sessions (required for Passport) ────────────────────────────────────────
 app.use(session({
   store: new pgSession({
     pool: pool,
     tableName: 'session'
   }),
-  secret: process.env.SESSION_SECRET || 'change-me-in-env',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
+    httpOnly: true,
+    sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
@@ -40,6 +44,7 @@ app.use('/auth', authRouter);
 app.use('/account/tokens', require('./routes/tokens'));
 
 // ── Public API routes (IP-rate-limited, no token required for reads) ─────────
+app.get('/api', (req, res) => res.json({ status: 200, message: 'Welcome to the Poetmap API' }));
 app.use('/api/poets',     apiRateLimit, require('./routes/poets.js'));
 app.use('/api/locations', apiRateLimit, require('./routes/locations'));
 app.use('/api/works',     apiRateLimit, require('./routes/works'));
@@ -53,6 +58,8 @@ app.use('/api/curator',       require('./routes/curator'));
 const path = require('path');
 app.get('/account', (req, res) => res.sendFile(path.join(__dirname, 'public', 'account.html')));
 app.get('/docs',    (req, res) => res.sendFile(path.join(__dirname, 'public', 'docs.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
+app.get('/terms',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'terms.html')));
 // ── Admin — localhost only ────────────────────────────────────────────────────
 app.use('/admin', require('./routes/admin'));
 

@@ -2,6 +2,8 @@
  * middleware.js — Reusable Express middleware
  */
 
+require('dotenv').config();
+
 /** Reject unauthenticated requests */
 function requireAuth(req, res, next) {
   if (!req.isAuthenticated()) return res.status(401).json({ error: 'Not authenticated' });
@@ -46,9 +48,10 @@ function requireAdmin(req, res, next) {
  * reach this route.
  */
 function requireLocalhost(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress || '';
-  const clean = ip.replace(/^::ffff:/, ''); // normalise IPv4-mapped
-  if (clean === '127.0.0.1' || clean === '::1' || clean === 'localhost') {
+  const host = req.headers.host || 'poetmap.veillax.com';
+  const clean = host.split(':')[0]; // normalise host header
+  console.log('Host header:', host, '->', clean + ' (localhost key: ' + process.env.LOCALHOST_KEY + ')');
+  if (clean === process.env.LOCALHOST_KEY || clean === 'localhost' || clean === '127.0.0.1') {
     return next();
   }
   // Return a plain 404 so the route doesn't even appear to exist externally

@@ -12,7 +12,10 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const { rows } = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
     done(null, rows[0] || null);
   } catch (err) {
     done(err, null);
@@ -99,7 +102,16 @@ router.get('/google',
 );
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/?auth=error' }),
-  (req, res) => res.redirect('/?auth=success')
+  (req, res) => {
+  req.logIn(req.user, (err) => {
+    if (err) {
+      console.error("LOGIN ERROR:", err);
+      return res.redirect('/?auth=error');
+    }
+
+    return res.redirect('/?auth=success');
+  });
+}
 );
 
 // GitHub
@@ -108,10 +120,19 @@ router.get('/github',
 );
 router.get('/github/callback',
   passport.authenticate('github', { failureRedirect: '/?auth=error' }),
-  (req, res) => res.redirect('/?auth=success')
+  (req, res) => {
+  req.logIn(req.user, (err) => {
+    if (err) {
+      console.error("LOGIN ERROR:", err);
+      return res.redirect('/?auth=error');
+    }
+
+    return res.redirect('/?auth=success');
+  });
+}
 );
 
-// Current user (JSON — used by frontend)
+// Current user (JSON — used by frontend) 
 router.get('/me', (req, res) => {
   if (req.isAuthenticated()) {
     res.json({
@@ -119,6 +140,7 @@ router.get('/me', (req, res) => {
       display_name: req.user.display_name,
       avatar_url:   req.user.avatar_url,
       provider:     req.user.provider,
+      role:         req.user.role || 'user'
     });
   } else {
     res.status(401).json({ error: 'Not authenticated' });
@@ -134,40 +156,3 @@ router.post('/logout', (req, res, next) => {
 });
 
 module.exports = { passport, router };
-
-/*
-  ── Database migration (run once) ───────────────────────────────────────────
-  Add this table to your PostgreSQL database:
-
-  CREATE TABLE IF NOT EXISTS users (
-    id           SERIAL PRIMARY KEY,
-    provider     VARCHAR(20)  NOT NULL,          -- 'google' | 'github'
-    provider_id  VARCHAR(100) NOT NULL,
-    display_name VARCHAR(200),
-    email        VARCHAR(200),
-    avatar_url   TEXT,
-    created_at   TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (provider, provider_id)
-  );
-
-  ── .env additions ───────────────────────────────────────────────────────────
-  SESSION_SECRET=your_long_random_secret_here
-
-  GOOGLE_CLIENT_ID=your_google_client_id
-  GOOGLE_CLIENT_SECRET=your_google_client_secret
-  GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
-
-  GITHUB_CLIENT_ID=your_github_client_id
-  GITHUB_CLIENT_SECRET=your_github_client_secret
-  GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
-
-  ── Google Cloud Console ─────────────────────────────────────────────────────
-  1. Go to console.cloud.google.com → APIs & Services → Credentials
-  2. Create OAuth 2.0 Client ID (Web application)
-  3. Add Authorized redirect URI: http://localhost:3000/auth/google/callback
-     (and your production URL when deploying)
-
-  ── GitHub OAuth App ─────────────────────────────────────────────────────────
-  1. GitHub → Settings → Developer settings → OAuth Apps → New OAuth App
-  2. Authorization callback URL: http://localhost:3000/auth/github/callback
-*/

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Poetmap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { overflow: auto; }
+    .legal-page {
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 64px 32px 96px;
+    }
+    .legal-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.04em;
+      margin-bottom: 48px;
+      opacity: 0.8;
+      transition: opacity 0.15s;
+    }
+    .legal-back:hover { opacity: 1; }
+    .legal-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .legal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .legal-date {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-bottom: 48px;
+    }
+    .legal-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+    .legal-section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+    .legal-section p, .legal-section li {
+      font-size: 0.88rem;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+    .legal-section ul {
+      padding-left: 1.4em;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+    .legal-section li { margin-bottom: 6px; }
+    .legal-section a { color: var(--accent); text-decoration: none; }
+    .legal-section a:hover { text-decoration: underline; }
+    .legal-highlight {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 4px;
+      padding: 14px 18px;
+      margin: 20px 0;
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .legal-footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .legal-footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="legal-page">
+    <a href="/" class="legal-back">&#8592; Back to Poetmap</a>
+
+    <p class="legal-eyebrow">Legal</p>
+    <h1 class="legal-title">Privacy Policy</h1>
+    <p class="legal-date">Last updated: April 16, 2026</p>
+
+    <div class="legal-highlight">
+      Poetmap is a small, open-source project. We collect as little data as possible and never sell anything to anyone.
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>1. Who We Are</h2>
+      <p>Poetmap (<strong>poetmap.veillax.com</strong>) is an open-source cartography of poets - where they were born, lived, and wrote. The service is operated by Veillax. Questions about this policy can be directed to the contact information at the bottom of this page.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>2. Information We Collect</h2>
+      <p>We collect only what is necessary to operate the service:</p>
+      <ul>
+        <li><strong>Account information</strong> - if you sign in via Google or GitHub OAuth, we receive your name, email address, and profile picture URL from those providers. We store your email and display name to identify your account.</li>
+        <li><strong>Contributions</strong> - poet entries, locations, and related data you submit through the Contribute form.</li>
+        <li><strong>Session data</strong> - a session token stored in a cookie to keep you signed in.</li>
+        <li><strong>Analytics data</strong> - we use a self-hosted instance of Tianji at to measure page views and general usage. See Section 5 for details.</li>
+      </ul>
+      <p>We do <strong>not</strong> collect passwords (OAuth only), payment information, or any sensitive personal data.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>3. How We Use Your Information</h2>
+      <ul>
+        <li>To authenticate you and maintain your session</li>
+        <li>To attribute contributions you submit to your account</li>
+        <li>To contact you if there is an issue with your account (rarely, if ever)</li>
+        <li>To understand aggregate usage patterns so we can improve the service</li>
+      </ul>
+      <p>We do not use your data for advertising, profiling, or any automated decision-making.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>4. Data Sharing</h2>
+      <p>We do not sell, rent, or share your personal data with third parties, except in the following limited circumstances:</p>
+      <ul>
+        <li><strong>OAuth providers</strong> - Google and GitHub process your login. Their privacy policies govern what they collect during that flow.</li>
+        <li><strong>Legal requirements</strong> - we may disclose information if required to do so by law or valid legal process.</li>
+      </ul>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>5. Analytics (Tianji)</h2>
+      <p>We use <strong>Tianji</strong>, a self-hosted, open-source analytics platform, to understand how Poetmap is used. Tianji is hosted on our own infrastructure - your data never goes to a third-party analytics company.</p>
+      <p>Tianji collects:</p>
+      <ul>
+        <li>Page URLs visited</li>
+        <li>Referrer (where you came from)</li>
+        <li>Browser type and operating system (general, not fingerprinted)</li>
+        <li>Country-level location derived from IP address</li>
+      </ul>
+      <p>IP addresses are not stored in identifiable form. No cross-site tracking is performed. No data is sold or shared. Because this analytics setup does not identify individual users and does not use persistent tracking cookies, it is designed to operate without requiring a consent banner under most interpretations of GDPR Recital 47 and the ePrivacy Directive - however, we disclose it here in full transparency.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>6. Cookies</h2>
+      <p>We use two types of cookies:</p>
+      <ul>
+        <li><strong>Session cookie</strong> - a strictly necessary cookie to keep you signed in. This cookie is required for the service to function and does not require consent.</li>
+        <li><strong>Analytics</strong> - Tianji may set a cookie to distinguish unique visits. This cookie contains no personal identifiers.</li>
+      </ul>
+      <p>You can disable cookies in your browser settings, though this will prevent you from signing in.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>7. Data Retention</h2>
+      <p>Account data is retained for as long as your account exists. You may request deletion at any time (see Section 9). Contribution data (poet entries) may be retained as part of the open dataset even after account deletion, but will be disassociated from your identity. Analytics data is retained for up to 12 months.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>8. Your Rights</h2>
+      <p>Depending on where you are located, you may have the right to:</p>
+      <ul>
+        <li>Access the personal data we hold about you</li>
+        <li>Request correction of inaccurate data</li>
+        <li>Request deletion of your account and associated personal data</li>
+        <li>Object to or restrict processing</li>
+        <li>Lodge a complaint with your local data protection authority</li>
+      </ul>
+      <p>EU/UK residents have these rights under GDPR. California residents have rights under CCPA. To exercise any of these rights, contact us using the details below.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>9. Contact</h2>
+      <p>For any privacy-related questions or data deletion requests, please open an issue on the project's GitHub repository or contact the administrator via the details listed there.</p>
+    </div>
+
+    <hr class="legal-divider">
+
+    <div class="legal-section">
+      <h2>10. Changes to This Policy</h2>
+      <p>We may update this policy from time to time. The "Last updated" date at the top reflects the most recent revision. Continued use of Poetmap after changes constitutes acceptance of the updated policy.</p>
+    </div>
+
+    <div class="legal-footer">
+      <span>© 2025 Poetmap · Veillax</span>
+      <span>
+        <a href="/privacy">Privacy Policy</a> ·
+        <a href="/terms">Terms of Service</a> ·
+        <a href="/">Map</a>
+      </span>
+    </div>
+  </div>
+
+  <script async defer src="https://analytics.veillax.com/tracker.js" data-website-id="cmm0gh1xh0011bmmjh85jt3me"></script>
+</body>
+</html>
